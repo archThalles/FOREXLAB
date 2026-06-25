@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForexLab — Análise por Câmera</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#040508;--s1:#080b12;--s2:#0d1018;--s3:#121620;--s4:#171c26;
+  --b1:#1e2535;--b2:#273045;
+  --green:#00e676;--red:#ff1744;--yellow:#ffd600;
+  --blue:#2979ff;--cyan:#00e5ff;--orange:#ff6d00;--purple:#d500f9;
+  --text:#c8d4f0;--muted:#4a5878;--dim:#1e2535;--white:#e8f0ff;
+  --mono:'Space Mono',monospace;--sans:'Space Grotesk',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:12px;display:flex;flex-direction:column;}
+
+/* SETUP */
+.setup{position:fixed;inset:0;background:rgba(4,5,8,.97);z-index:999;display:flex;align-items:center;justify-content:center;}
+.setup.hidden{display:none;}
+.sbox{background:var(--s2);border:1px solid var(--b2);border-radius:16px;padding:30px;max-width:420px;width:92%;}
+.sbox h2{font-size:18px;font-weight:700;color:var(--white);margin-bottom:5px;letter-spacing:-.5px;}
+.sbox h2 span{color:var(--yellow);}
+.sbox p{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;}
+.sinp{width:100%;background:var(--s3);border:1px solid var(--b2);border-radius:7px;padding:10px 13px;color:var(--white);font-family:var(--mono);font-size:11px;outline:none;transition:border .2s;margin-bottom:8px;}
+.sinp:focus{border-color:var(--yellow);}
+.sinp::placeholder{color:var(--muted);}
+.snote{font-size:11px;color:var(--muted);background:var(--s3);border:1px solid var(--b1);border-radius:6px;padding:7px 11px;margin-bottom:14px;line-height:1.5;}
+.snote em{color:var(--green);font-style:normal;}
+.sbtn{width:100%;padding:11px;border-radius:7px;background:var(--yellow);border:none;color:#000;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:8px;}
+.sbtn:hover{box-shadow:0 0 20px rgba(255,214,0,.3);}
+.sbtn2{width:100%;padding:9px;border-radius:7px;background:transparent;border:1px solid var(--b2);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;}
+.sbtn2:hover{border-color:var(--blue);color:var(--blue);}
+
+/* HEADER */
+.header{display:flex;align-items:center;padding:0 14px;height:44px;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0;gap:10px;}
+.logo{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--yellow);letter-spacing:1px;}
+.badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;white-space:nowrap;}
+.b-cam{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--cyan);}
+.b-api{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);color:var(--green);}
+.b-off{background:var(--s3);border:1px solid var(--b1);color:var(--muted);}
+.hml{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.h-dot{width:7px;height:7px;border-radius:50%;}
+.h-dot.on{background:var(--green);animation:pulse 1.5s infinite;}
+.h-dot.off{background:var(--red);}
+.h-dot.wait{background:var(--yellow);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.h-status{font-family:var(--mono);font-size:10px;color:var(--muted);}
+
+/* TICKER */
+.ticker{display:flex;align-items:center;padding:0 14px;height:28px;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0;gap:10px;overflow:hidden;}
+.tclk{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--yellow);letter-spacing:2px;}
+.tsep{width:1px;height:14px;background:var(--b1);flex-shrink:0;}
+.tki{display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.tkl{font-size:9px;color:var(--muted);}
+.tkv{font-family:var(--mono);font-size:10px;font-weight:700;}
+.m1cd{display:flex;align-items:center;gap:5px;background:var(--s3);border:1px solid var(--b2);border-radius:4px;padding:2px 8px;}
+.m1l{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.m1v{font-family:var(--mono);font-size:13px;font-weight:700;min-width:26px;text-align:center;}
+.m1bar{width:36px;height:3px;background:var(--s4);border-radius:2px;overflow:hidden;}
+.m1fill{height:100%;border-radius:2px;transition:width .9s linear,background .3s;}
+
+/* MAIN */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* CAMERA PANEL */
+.cam-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--b1);position:relative;}
+.cam-wrap{flex:1;position:relative;background:#000;overflow:hidden;}
+video#camFeed{width:100%;height:100%;object-fit:cover;display:block;}
+canvas#snapCanvas{display:none;}
+
+/* CAM OVERLAY */
+.cam-overlay{position:absolute;inset:0;pointer-events:none;}
+.cam-grid{position:absolute;inset:0;}
+.cam-grid::before,.cam-grid::after{content:'';position:absolute;}
+.cam-grid::before{top:33.33%;left:0;right:0;border-top:1px solid rgba(0,229,255,.15);}
+.cam-grid::after{top:66.66%;left:0;right:0;border-top:1px solid rgba(0,229,255,.15);}
+.cam-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;border:1px solid rgba(0,229,255,.2);border-radius:4px;}
+.cam-corners{position:absolute;inset:0;}
+.corner{position:absolute;width:20px;height:20px;border-color:var(--cyan);border-style:solid;border-width:0;}
+.corner.tl{top:8px;left:8px;border-top-width:2px;border-left-width:2px;}
+.corner.tr{top:8px;right:8px;border-top-width:2px;border-right-width:2px;}
+.corner.bl{bottom:8px;left:8px;border-bottom-width:2px;border-left-width:2px;}
+.corner.br{bottom:8px;right:8px;border-bottom-width:2px;border-right-width:2px;}
+
+/* CAM STATUS */
+.cam-status{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.7);padding:5px 10px;border-radius:5px;font-family:var(--mono);font-size:10px;color:var(--text);}
+.cam-count{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);padding:5px 10px;border-radius:5px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--cyan);}
+
+/* SNAPSHOT PREVIEW */
+.snap-preview{position:absolute;bottom:10px;left:10px;width:120px;height:80px;border:1px solid rgba(0,229,255,.3);border-radius:4px;overflow:hidden;background:#000;}
+.snap-preview img{width:100%;height:100%;object-fit:cover;}
+.snap-lbl{position:absolute;bottom:-1px;left:0;right:0;background:rgba(0,0,0,.8);text-align:center;font-family:var(--mono);font-size:9px;color:var(--cyan);padding:2px;}
+
+/* CAM CONTROLS */
+.cam-controls{padding:8px 12px;border-top:1px solid var(--b1);background:var(--s1);flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.ctrl-btn{padding:7px 14px;border-radius:6px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;border:1px solid;letter-spacing:.3px;}
+.btn-start{background:var(--green);border-color:var(--green);color:#000;}
+.btn-start:hover{box-shadow:0 0 15px rgba(0,230,118,.4);}
+.btn-stop{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-stop:hover{box-shadow:0 0 15px rgba(255,23,68,.4);}
+.btn-snap{background:transparent;border-color:var(--cyan);color:var(--cyan);}
+.btn-snap:hover{background:rgba(0,229,255,.08);}
+.btn-auto{background:transparent;border-color:var(--yellow);color:var(--yellow);}
+.btn-auto.active{background:rgba(255,214,0,.1);box-shadow:0 0 10px rgba(255,214,0,.2);}
+.btn-auto:hover{background:rgba(255,214,0,.08);}
+.ctrl-sep{flex:1;}
+.interval-sel{background:var(--s3);border:1px solid var(--b2);border-radius:5px;padding:6px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;}
+.interval-sel:focus{border-color:var(--yellow);}
+.ctrl-lbl{font-size:10px;color:var(--muted);}
+
+/* RIGHT PANEL */
+.right{width:380px;display:flex;flex-direction:column;overflow:hidden;background:var(--s1);}
+.rscroll{flex:1;overflow-y:auto;}
+.rscroll::-webkit-scrollbar{width:3px;}
+.rscroll::-webkit-scrollbar-thumb{background:var(--b2);}
+
+/* ANALYSIS SECTION */
+.sec{margin:8px;background:var(--s2);border-radius:10px;overflow:hidden;border:1px solid var(--b2);}
+.sec-hdr{padding:9px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;}
+.sec-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;}
+.sec-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:4px;}
+
+/* LAST SNAPSHOT */
+.snap-sec{padding:10px 12px;}
+.snap-full{width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--b2);background:#000;margin-bottom:8px;}
+.snap-full img{width:100%;display:block;}
+.snap-meta{display:flex;gap:8px;flex-wrap:wrap;}
+.sm-item{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;background:var(--s3);color:var(--muted);}
+
+/* AI ANALYSIS */
+.ai-box{margin:8px;background:var(--s2);border:1px solid var(--b2);border-radius:10px;overflow:hidden;}
+.ai-hdr{padding:9px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;}
+.ai-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;}
+.ai-time{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.ai-body{padding:12px;}
+.ai-txt{font-size:12px;line-height:1.8;color:var(--text);}
+.ai-txt strong{color:var(--white);}
+.hl{color:var(--cyan);font-weight:700;}
+.ch{color:var(--green);font-weight:700;}
+.ph{color:var(--red);font-weight:700;}
+.yi{color:var(--yellow);font-weight:700;}
+.dots{display:flex;gap:4px;padding:10px 0;}
+.dots span{width:6px;height:6px;border-radius:50%;background:var(--yellow);animation:dt 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:.2s}
+.dots span:nth-child(3){animation-delay:.4s}
+@keyframes dt{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+
+/* SIGNALS BOX */
+.sigs-box{margin:0 8px 8px;background:var(--s2);border:1px solid var(--b2);border-radius:10px;overflow:hidden;}
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);}
+.sig-c{background:var(--s2);padding:14px;text-align:center;transition:all .3s;}
+.sig-p{background:var(--s2);padding:14px;text-align:center;transition:all .3s;}
+.sig-c.on{background:rgba(0,230,118,.05);outline:2px solid var(--green);}
+.sig-p.on{background:rgba(255,23,68,.05);outline:2px solid var(--red);}
+.sig-lbl{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:4px;}
+.sig-c .sig-lbl{color:var(--green);}
+.sig-p .sig-lbl{color:var(--red);}
+.sig-pct{font-family:var(--mono);font-size:24px;font-weight:700;}
+.sig-c .sig-pct{color:var(--green);}
+.sig-p .sig-pct{color:var(--red);}
+.sig-sub{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;}
+.sig-foot{padding:8px 12px;border-top:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;}
+.sig-exp{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--cyan);}
+.sig-stars{font-size:12px;letter-spacing:2px;color:var(--yellow);}
+
+/* HISTORY */
+.hist-box{margin:0 8px 8px;}
+.hist-title{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+.hist-item{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;margin-bottom:4px;}
+.hi-time{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;margin-top:1px;}
+.hi-sig{font-family:var(--mono);font-size:10px;font-weight:700;white-space:nowrap;}
+.hi-sig.call{color:var(--green);}
+.hi-sig.put{color:var(--red);}
+.hi-sig.wait{color:var(--yellow);}
+.hi-txt{font-size:11px;color:var(--text);line-height:1.5;}
+
+/* SUMMARY */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--b1);flex-shrink:0;}
+.sm{padding:7px 4px;text-align:center;border-right:1px solid var(--b1);}
+.sm:last-child{border-right:none;}
+.sm-l{font-size:9px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;}
+.sm-v{font-family:var(--mono);font-size:11px;font-weight:700;}
+
+/* NO CAM */
+.no-cam{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:20px;}
+.no-cam-icon{font-size:48px;opacity:.4;}
+.no-cam-txt{font-size:14px;color:var(--muted);text-align:center;line-height:1.6;}
+.no-cam-btn{padding:10px 24px;border-radius:7px;background:var(--cyan);border:none;color:#000;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;}
+.no-cam-btn:hover{box-shadow:0 0 20px rgba(0,229,255,.3);}
+
+/* STATUS BAR */
+.stbar{padding:2px 12px;border-top:1px solid var(--b1);display:flex;justify-content:space-between;flex-shrink:0;}
+.st-t{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.st-p{font-family:var(--mono);font-size:9px;}
+.ok{color:var(--green);}
+.er{color:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="setup" id="setup">
+  <div class="sbox">
+    <h2>ForexLab <span>Câmera</span></h2>
+    <p>Aponte a câmera para o gráfico da sua plataforma. A IA analisa automaticamente os candles, Bollinger Bands e dá o sinal de CALL ou PUT.</p>
+    <p style="margin-bottom:10px">Cole sua API Key da Anthropic para ativar a análise:</p>
+    <input class="sinp" type="password" id="keyInp" placeholder="sk-ant-api03-..." autocomplete="off"/>
+    <div class="snote"><em>🔒</em> Salva só no seu Chrome. Necessário para análise IA via câmera.</div>
+    <button class="sbtn" onclick="saveKey()">✓ SALVAR E ABRIR CÂMERA</button>
+    <button class="sbtn2" onclick="skipSetup()">Já tenho chave salva — pular</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">◈ FOREXLAB CÂMERA</div>
+  <div class="badge b-cam" id="badgeCam">📷 CÂMERA OFF</div>
+  <div class="badge b-off" id="badgeAI">🤖 IA OFF</div>
+  <div class="badge b-off" id="badgeAuto">⏱ AUTO OFF</div>
+  <div class="hml">
+    <div class="h-dot off" id="camDot"></div>
+    <span class="h-status" id="camStatus">Câmera não iniciada</span>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="tclk" id="tClk">00:00:00</div>
+  <div class="tsep"></div>
+  <div class="m1cd">
+    <span class="m1l">M1:</span>
+    <span class="m1v" id="m1v">60s</span>
+    <div class="m1bar"><div class="m1fill" id="m1f" style="width:100%;background:var(--green)"></div></div>
+  </div>
+  <div class="tsep"></div>
+  <div class="tki"><span class="tkl">Análises</span><span class="tkv" id="tkCount" style="color:var(--cyan)">0</span></div>
+  <div class="tsep"></div>
+  <div class="tki"><span class="tkl">Último sinal</span><span class="tkv" id="tkSig">—</span></div>
+  <div class="tsep"></div>
+  <div class="tki"><span class="tkl">Próxima análise</span><span class="tkv" id="tkNext" style="color:var(--yellow)">—</span></div>
+  <div class="tsep"></div>
+  <div class="tki"><span class="tkl">Qualidade</span><span class="tkv" id="tkQual">—</span></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CAMERA PANEL -->
+  <div class="cam-panel">
+    <div class="cam-wrap" id="camWrap">
+
+      <!-- NO CAM STATE -->
+      <div class="no-cam" id="noCam">
+        <div class="no-cam-icon">📷</div>
+        <div class="no-cam-txt">
+          Aponte a câmera para o gráfico da plataforma<br>
+          <small style="color:var(--muted)">Bollinger Bands visíveis = melhor análise</small>
+        </div>
+        <button class="no-cam-btn" onclick="startCamera()">▶ INICIAR CÂMERA</button>
+      </div>
+
+      <!-- VIDEO FEED -->
+      <video id="camFeed" autoplay playsinline style="display:none"></video>
+      <canvas id="snapCanvas"></canvas>
+
+      <!-- OVERLAY -->
+      <div class="cam-overlay" id="camOverlay" style="display:none">
+        <div class="cam-grid"></div>
+        <div class="cam-center"></div>
+        <div class="cam-corners">
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+        </div>
+        <div class="cam-status">
+          <div class="h-dot on"></div>
+          <span id="camStatLbl">Câmera ativa</span>
+        </div>
+        <div class="cam-count" id="camCount">Análises: 0</div>
+      </div>
+
+      <!-- SNAPSHOT PREVIEW -->
+      <div class="snap-preview" id="snapPreview" style="display:none">
+        <img id="snapThumb" src="" alt="último snapshot"/>
+        <div class="snap-lbl">Último frame</div>
+      </div>
+
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="cam-controls">
+      <button class="ctrl-btn btn-start" id="btnStart" onclick="startCamera()">▶ INICIAR</button>
+      <button class="ctrl-btn btn-stop" id="btnStop" onclick="stopCamera()" style="display:none">■ PARAR</button>
+      <button class="ctrl-btn btn-snap" id="btnSnap" onclick="analyzeNow()" disabled>📷 ANALISAR AGORA</button>
+      <button class="ctrl-btn btn-auto" id="btnAuto" onclick="toggleAuto()">⏱ AUTO</button>
+      <div class="ctrl-sep"></div>
+      <span class="ctrl-lbl">Intervalo:</span>
+      <select class="interval-sel" id="intervalSel">
+        <option value="10">10s</option>
+        <option value="15">15s</option>
+        <option value="30" selected>30s</option>
+        <option value="60">60s</option>
+        <option value="120">2 min</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="rscroll">
+
+      <!-- LAST SNAPSHOT -->
+      <div class="sec">
+        <div class="sec-hdr">
+          <span class="sec-title">📸 Último Frame Analisado</span>
+          <span class="sec-badge" id="snapTime" style="color:var(--muted);background:var(--s3)">—</span>
+        </div>
+        <div class="snap-sec">
+          <div class="snap-full" id="snapFull">
+            <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Nenhuma análise ainda</div>
+          </div>
+          <div class="snap-meta" id="snapMeta"></div>
+        </div>
+      </div>
+
+      <!-- SIGNAL -->
+      <div class="sigs-box">
+        <div class="sec-hdr" style="padding:9px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;">
+          <span class="sec-title">🎯 Sinal da Análise</span>
+          <span class="sec-badge" id="sigBadge" style="color:var(--muted);background:var(--s3)">AGUARDANDO</span>
+        </div>
+        <div class="sig-grid">
+          <div class="sig-c" id="sigC"><div class="sig-lbl">▲ CALL</div><div class="sig-pct" id="sigCP">—%</div><div class="sig-sub" id="sigCS">—</div></div>
+          <div class="sig-p" id="sigP"><div class="sig-lbl">▼ PUT</div><div class="sig-pct" id="sigPP">—%</div><div class="sig-sub" id="sigPS">—</div></div>
+        </div>
+        <div class="sig-foot">
+          <span class="sig-exp" id="sigExp">Expiração: —</span>
+          <span class="sig-stars" id="sigStars">☆☆☆☆☆</span>
+        </div>
+      </div>
+
+      <!-- AI ANALYSIS -->
+      <div class="ai-box">
+        <div class="ai-hdr">
+          <span class="ai-title">🤖 Análise IA — Visão do Gráfico</span>
+          <span class="ai-time" id="aiTime">—</span>
+        </div>
+        <div class="ai-body">
+          <div class="ai-txt" id="aiTxt" style="color:var(--muted)">
+            Inicie a câmera e clique em <strong style="color:var(--cyan)">📷 ANALISAR AGORA</strong> ou ative o modo automático para começar.
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="hist-box">
+        <div class="hist-title">📋 Histórico de Sinais</div>
+        <div id="histList">
+          <div style="padding:10px;color:var(--muted);font-size:11px;text-align:center">Nenhuma análise ainda</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="summary">
+      <div class="sm"><div class="sm-l">Total</div><div class="sm-v" id="smTotal" style="color:var(--cyan)">0</div></div>
+      <div class="sm"><div class="sm-l">CALL</div><div class="sm-v" id="smCall" style="color:var(--green)">0</div></div>
+      <div class="sm"><div class="sm-l">PUT</div><div class="sm-v" id="smPut" style="color:var(--red)">0</div></div>
+      <div class="sm"><div class="sm-l">Último</div><div class="sm-v" id="smLast">—</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="stbar">
+  <span class="st-t" id="stT">Configure a API Key e inicie a câmera para começar</span>
+  <span class="st-p" id="stP">○ aguardando</span>
+</div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('fl_cam_key') || '';
+let stream = null;
+let autoTimer = null;
+let nextTimer = null;
+let analysisCount = 0;
+let callCount = 0;
+let putCount = 0;
+let isAnalyzing = false;
+let autoMode = false;
+let nextIn = 0;
+const history = [];
+
+// ── SETUP ─────────────────────────────────────────────────────────────────────
+function init() {
+  // Câmera abre imediatamente — sem modal de bloqueio
+  document.getElementById('setup').classList.add('hidden');
+  if (apiKey) updateBadgeAI(true);
+  startClock();
+}
+
+function saveKey() {
+  const v = document.getElementById('keyInp').value.trim();
+  if (!v.startsWith('sk-ant-')) { alert('Chave inválida. Deve começar com sk-ant-...'); return; }
+  apiKey = v;
+  localStorage.setItem('fl_cam_key', v);
+  document.getElementById('setup').classList.add('hidden');
+  updateBadgeAI(true);
+  startCamera();
+}
+
+function skipSetup() {
+  apiKey = localStorage.getItem('fl_cam_key') || '';
+  document.getElementById('setup').classList.add('hidden');
+  if (apiKey) updateBadgeAI(true);
+}
+
+function updateBadgeAI(on) {
+  const b = document.getElementById('badgeAI');
+  b.textContent = on ? '🤖 IA ON' : '🤖 IA OFF';
+  b.className = on ? 'badge b-api' : 'badge b-off';
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────────
+function startClock() {
+  setInterval(() => {
+    const n = new Date();
+    document.getElementById('tClk').textContent =
+      String(n.getHours()).padStart(2, '0') + ':' +
+      String(n.getMinutes()).padStart(2, '0') + ':' +
+      String(n.getSeconds()).padStart(2, '0');
+    const rem = 60 - n.getSeconds();
+    document.getElementById('m1v').textContent = rem + 's';
+    document.getElementById('m1v').style.color = rem <= 10 ? 'var(--red)' : rem <= 20 ? 'var(--orange)' : 'var(--yellow)';
+    const fill = document.getElementById('m1f');
+    fill.style.width = (rem / 60 * 100) + '%';
+    fill.style.background = rem <= 10 ? 'var(--red)' : rem <= 20 ? 'var(--orange)' : 'var(--green)';
+    if (autoMode && nextIn > 0) {
+      nextIn--;
+      document.getElementById('tkNext').textContent = nextIn + 's';
+      if (nextIn <= 0 && !isAnalyzing) analyzeNow();
+    }
+  }, 1000);
+}
+
+// ── CAMERA ────────────────────────────────────────────────────────────────────
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        width: { ideal: 1920 }, 
+        height: { ideal: 1080 }, 
+        facingMode: { exact: 'environment' }
+      }
+    });
+    const video = document.getElementById('camFeed');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('noCam').style.display = 'none';
+    document.getElementById('camOverlay').style.display = 'block';
+    document.getElementById('snapPreview').style.display = 'block';
+    document.getElementById('btnStart').style.display = 'none';
+    document.getElementById('btnStop').style.display = 'inline-block';
+    document.getElementById('btnSnap').disabled = false;
+    document.getElementById('camDot').className = 'h-dot on';
+    document.getElementById('camStatus').textContent = 'Câmera ativa — aponte para o gráfico';
+    document.getElementById('badgeCam').textContent = '📷 CÂMERA ON';
+    document.getElementById('badgeCam').className = 'badge b-api';
+    setSt('Câmera ativa — clique ANALISAR AGORA ou ative AUTO', 'ok');
+  } catch (e) {
+    setSt('Erro câmera: ' + e.message, 'er');
+    alert('Não foi possível acessar a câmera.\n\nVerifique se:\n1. A câmera está conectada\n2. O Chrome tem permissão de câmera\n3. Nenhum outro app está usando a câmera');
+  }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('camFeed').style.display = 'none';
+  document.getElementById('noCam').style.display = 'flex';
+  document.getElementById('camOverlay').style.display = 'none';
+  document.getElementById('snapPreview').style.display = 'none';
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStop').style.display = 'none';
+  document.getElementById('btnSnap').disabled = true;
+  document.getElementById('camDot').className = 'h-dot off';
+  document.getElementById('camStatus').textContent = 'Câmera parada';
+  document.getElementById('badgeCam').textContent = '📷 CÂMERA OFF';
+  document.getElementById('badgeCam').className = 'badge b-off';
+  if (autoMode) toggleAuto();
+  setSt('Câmera parada', '');
+}
+
+// ── AUTO MODE ─────────────────────────────────────────────────────────────────
+function toggleAuto() {
+  autoMode = !autoMode;
+  const btn = document.getElementById('btnAuto');
+  const badge = document.getElementById('badgeAuto');
+  if (autoMode) {
+    const interval = parseInt(document.getElementById('intervalSel').value);
+    nextIn = interval;
+    btn.textContent = '⏱ AUTO ON';
+    btn.classList.add('active');
+    badge.textContent = '⏱ AUTO ON';
+    badge.className = 'badge b-api';
+    setSt('Modo automático ativo — análise a cada ' + interval + 's', 'ok');
+  } else {
+    nextIn = 0;
+    btn.textContent = '⏱ AUTO';
+    btn.classList.remove('active');
+    badge.textContent = '⏱ AUTO OFF';
+    badge.className = 'badge b-off';
+    document.getElementById('tkNext').textContent = '—';
+    setSt('Modo automático desativado', '');
+  }
+}
+
+// ── CAPTURE ───────────────────────────────────────────────────────────────────
+function captureFrame() {
+  const video = document.getElementById('camFeed');
+  const canvas = document.getElementById('snapCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ── ANALYZE ───────────────────────────────────────────────────────────────────
+async function analyzeNow() {
+  if (!stream) { alert('Inicie a câmera primeiro!'); return; }
+  if (!apiKey) {
+    const k = prompt('Cole sua API Key da Anthropic (sk-ant-...):\n\nObtém em: console.anthropic.com/settings/keys');
+    if (!k || !k.startsWith('sk-ant-')) return;
+    apiKey = k; localStorage.setItem('fl_cam_key', k); updateBadgeAI(true);
+  }
+  if (isAnalyzing) return;
+
+  isAnalyzing = true;
+  document.getElementById('btnSnap').disabled = true;
+  document.getElementById('aiTxt').innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+  setSt('Capturando e analisando...', '');
+
+  // Reset auto timer
+  if (autoMode) {
+    nextIn = parseInt(document.getElementById('intervalSel').value);
+  }
+
+  try {
+    // Capture frame
+    const dataUrl = captureFrame();
+    const base64 = dataUrl.split(',')[1];
+
+    // Show thumbnail
+    document.getElementById('snapThumb').src = dataUrl;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR');
+    document.getElementById('snapTime').textContent = timeStr;
+    document.getElementById('snapTime').style.color = 'var(--cyan)';
+    document.getElementById('snapTime').style.background = 'var(--s3)';
+
+    // Show in right panel
+    document.getElementById('snapFull').innerHTML = `<img src="${dataUrl}" alt="análise" style="width:100%;display:block;border-radius:6px;"/>`;
+
+    // Call Claude Vision API
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: base64
+              }
+            },
+            {
+              type: 'text',
+              text: `Você é especialista em análise técnica de Forex. Analise este gráfico de EUR/USD M1 (candle de 1 minuto) para opções binárias.
+
+Responda em formato JSON puro (sem markdown, sem backticks):
+{
+  "sinal": "CALL" ou "PUT" ou "AGUARDAR",
+  "probabilidade_call": número de 0 a 100,
+  "probabilidade_put": número de 0 a 100,
+  "confianca": número de 1 a 5,
+  "expiracao": "texto ex: 3-5 min",
+  "padrao_candle": "nome do padrão identificado",
+  "posicao_bollinger": "descrição da posição nas bandas",
+  "tendencia": "ALTA" ou "BAIXA" ou "LATERAL",
+  "rsi_estimado": "sobrevendido" ou "sobrecomprado" ou "neutro",
+  "resumo": "2-3 frases explicando o sinal para um iniciante",
+  "o_que_observar": "1 frase sobre o que confirma ou invalida o sinal",
+  "qualidade_imagem": "BOA" ou "REGULAR" ou "RUIM"
+}
+
+Se a imagem não mostrar um gráfico claro, coloque sinal "AGUARDAR" e qualidade "RUIM".`
+            }
+          ]
+        }]
+      })
+    });
+
+    if (response.status === 401) {
+      document.getElementById('aiTxt').innerHTML = '<span style="color:var(--red)">API Key inválida. Clique em "IA ON" no topo para atualizar.</span>';
+      isAnalyzing = false;
+      document.getElementById('btnSnap').disabled = false;
+      return;
+    }
+
+    const data = await response.json();
+    const rawText = data.content?.map(b => b.text || '').join('') || '{}';
+
+    // Parse JSON response
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      // Try to extract JSON from text
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) {
+        try { result = JSON.parse(match[0]); }
+        catch (e2) { result = { sinal: 'AGUARDAR', probabilidade_call: 50, probabilidade_put: 50, confianca: 1, expiracao: '—', padrao_candle: '—', posicao_bollinger: '—', tendencia: '—', rsi_estimado: '—', resumo: rawText.substring(0, 200), o_que_observar: '—', qualidade_imagem: 'REGULAR' }; }
+      } else {
+        result = { sinal: 'AGUARDAR', probabilidade_call: 50, probabilidade_put: 50, confianca: 1, expiracao: '—', padrao_candle: '—', posicao_bollinger: '—', tendencia: '—', rsi_estimado: '—', resumo: rawText.substring(0, 200), o_que_observar: '—', qualidade_imagem: 'RUIM' };
+      }
+    }
+
+    // Update UI
+    updateSignal(result, timeStr);
+    updateAIText(result);
+    addHistory(result, timeStr, dataUrl);
+    updateStats(result);
+    updateSnapMeta(result);
+
+    analysisCount++;
+    document.getElementById('tkCount').textContent = analysisCount;
+    document.getElementById('camCount').textContent = 'Análises: ' + analysisCount;
+    document.getElementById('aiTime').textContent = timeStr;
+    setSt('Análise concluída às ' + timeStr + ' · ' + analysisCount + ' no total', 'ok');
+
+  } catch (e) {
+    document.getElementById('aiTxt').innerHTML = `<span style="color:var(--red)">Erro: ${e.message}</span>`;
+    setSt('Erro na análise: ' + e.message, 'er');
+  }
+
+  isAnalyzing = false;
+  document.getElementById('btnSnap').disabled = false;
+}
+
+// ── UPDATE UI ─────────────────────────────────────────────────────────────────
+function updateSignal(r, time) {
+  const isCall = r.sinal === 'CALL';
+  const isPut = r.sinal === 'PUT';
+  const cp = r.probabilidade_call || 50;
+  const pp = r.probabilidade_put || 50;
+  const stars = r.confianca || 1;
+
+  document.getElementById('sigCP').textContent = cp + '%';
+  document.getElementById('sigPP').textContent = pp + '%';
+  document.getElementById('sigCS').textContent = isCall ? '✓ Sinal ativo' : r.padrao_candle || '—';
+  document.getElementById('sigPS').textContent = isPut ? '✓ Sinal ativo' : r.padrao_candle || '—';
+  document.getElementById('sigCP').style.color = cp > pp ? 'var(--green)' : 'var(--muted)';
+  document.getElementById('sigPP').style.color = pp > cp ? 'var(--red)' : 'var(--muted)';
+  document.getElementById('sigC').className = 'sig-c' + (isCall ? ' on' : '');
+  document.getElementById('sigP').className = 'sig-p' + (isPut ? ' on' : '');
+  document.getElementById('sigExp').textContent = 'Expiração: ' + (r.expiracao || '—');
+  document.getElementById('sigStars').textContent = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+
+  const badge = document.getElementById('sigBadge');
+  badge.textContent = r.sinal || '—';
+  badge.style.color = isCall ? 'var(--green)' : isPut ? 'var(--red)' : 'var(--yellow)';
+  badge.style.background = isCall ? 'var(--green3)' : isPut ? 'var(--red3)' : 'rgba(255,214,0,.1)';
+
+  const tkSig = document.getElementById('tkSig');
+  tkSig.textContent = r.sinal || '—';
+  tkSig.style.color = isCall ? 'var(--green)' : isPut ? 'var(--red)' : 'var(--yellow)';
+
+  const smLast = document.getElementById('smLast');
+  smLast.textContent = r.sinal || '—';
+  smLast.style.color = isCall ? 'var(--green)' : isPut ? 'var(--red)' : 'var(--yellow)';
+}
+
+function updateAIText(r) {
+  const isCall = r.sinal === 'CALL';
+  const isPut = r.sinal === 'PUT';
+  document.getElementById('aiTxt').innerHTML = `
+    <div style="margin-bottom:10px">
+      <strong>📊 ${r.padrao_candle || 'Padrão'}</strong> — 
+      <span style="color:${r.tendencia==='ALTA'?'var(--green)':r.tendencia==='BAIXA'?'var(--red)':'var(--yellow)'}">${r.tendencia || '—'}</span>
+    </div>
+    <div style="margin-bottom:8px">${(r.resumo || '').replace(/CALL/g,'<span class="ch">CALL</span>').replace(/PUT/g,'<span class="ph">PUT</span>')}</div>
+    <div style="background:var(--s3);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:11px">
+      <span style="color:var(--muted)">Bollinger:</span> ${r.posicao_bollinger || '—'}<br>
+      <span style="color:var(--muted)">RSI estimado:</span> ${r.rsi_estimado || '—'}<br>
+      <span style="color:var(--muted)">Qualidade img:</span> <span style="color:${r.qualidade_imagem==='BOA'?'var(--green)':r.qualidade_imagem==='REGULAR'?'var(--yellow)':'var(--red)'}">${r.qualidade_imagem || '—'}</span>
+    </div>
+    <div style="background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:6px;padding:8px 10px;font-size:11px">
+      <span class="hl">⚡ Observar:</span> ${r.o_que_observar || '—'}
+    </div>`;
+}
+
+function addHistory(r, time, img) {
+  const isCall = r.sinal === 'CALL';
+  const isPut = r.sinal === 'PUT';
+  history.unshift({ r, time, img });
+  if (history.length > 10) history.pop();
+
+  document.getElementById('histList').innerHTML = history.map(h => `
+    <div class="hist-item">
+      <span class="hi-time">${h.time}</span>
+      <span class="hi-sig ${h.r.sinal === 'CALL' ? 'call' : h.r.sinal === 'PUT' ? 'put' : 'wait'}">${h.r.sinal}</span>
+      <span class="hi-txt">${h.r.padrao_candle || '—'} · ${h.r.posicao_bollinger ? h.r.posicao_bollinger.substring(0, 40) : '—'}</span>
+    </div>`).join('');
+}
+
+function updateStats(r) {
+  if (r.sinal === 'CALL') callCount++;
+  if (r.sinal === 'PUT') putCount++;
+  document.getElementById('smTotal').textContent = analysisCount + 1;
+  document.getElementById('smCall').textContent = callCount + (r.sinal === 'CALL' ? 1 : 0);
+  document.getElementById('smPut').textContent = putCount + (r.sinal === 'PUT' ? 1 : 0);
+}
+
+function updateSnapMeta(r) {
+  document.getElementById('snapMeta').innerHTML = [
+    { l: r.sinal, c: r.sinal === 'CALL' ? 'var(--green)' : r.sinal === 'PUT' ? 'var(--red)' : 'var(--yellow)' },
+    { l: r.tendencia || '—', c: 'var(--muted)' },
+    { l: r.rsi_estimado || '—', c: 'var(--muted)' },
+    { l: '★'.repeat(r.confianca || 0), c: 'var(--yellow)' },
+  ].map(m => `<span class="sm-item" style="color:${m.c}">${m.l}</span>`).join('');
+
+  document.getElementById('tkQual').textContent = r.qualidade_imagem || '—';
+  document.getElementById('tkQual').style.color = r.qualidade_imagem === 'BOA' ? 'var(--green)' : r.qualidade_imagem === 'REGULAR' ? 'var(--yellow)' : 'var(--red)';
+}
+
+function setSt(msg, t) {
+  document.getElementById('stT').textContent = msg;
+  const p = document.getElementById('stP');
+  p.textContent = t === 'ok' ? '● ativo' : t === 'er' ? '● erro' : '○ aguardando';
+  p.className = 'st-p ' + (t === 'ok' ? 'ok' : t === 'er' ? 'er' : '');
+}
+
+// Keyboard shortcut: Space = analyze now
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && stream && !isAnalyzing && e.target === document.body) {
+    e.preventDefault();
+    analyzeNow();
+  }
+});
+
+init();
+// Auto-start camera immediately
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!stream) startCamera();
+  }, 800);
+});
+</script>
+</body>
+</html>
