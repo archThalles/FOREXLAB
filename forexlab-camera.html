@@ -451,7 +451,7 @@ function startClock() {
 async function startCamera() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' }
     });
     const video = document.getElementById('camFeed');
     video.srcObject = stream;
